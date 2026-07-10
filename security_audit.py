@@ -31,43 +31,43 @@ TELEGRAM_CHAT_ID = "-1004448062967"
 DEFAULT_LOG_FILE = "mock_auth.log"
 THRESHOLD = 5
 
-# Unique and strict RSS news feeds categorized by domain
+# Unique and strict RSS news feeds categorized by domain and language
 FEEDS = {
     "Cybersecurity": {
-        "CERT-FR Avis": "https://www.cert.ssi.gouv.fr/avis/feed/",
-        "CERT-FR Alertes": "https://www.cert.ssi.gouv.fr/alerte/feed/",
-        "The Hacker News": "https://feeds.feedburner.com/TheHackersNews",
-        "BleepingComputer": "https://www.bleepingcomputer.com/feed/",
-        "Krebs on Security": "https://krebsonsecurity.com/feed/",
-        "Dark Reading": "https://www.darkreading.com/rss.xml"
+        "CERT-FR Avis": {"url": "https://www.cert.ssi.gouv.fr/avis/feed/", "lang": "fr"},
+        "CERT-FR Alertes": {"url": "https://www.cert.ssi.gouv.fr/alerte/feed/", "lang": "fr"},
+        "The Hacker News": {"url": "https://feeds.feedburner.com/TheHackersNews", "lang": "en"},
+        "BleepingComputer": {"url": "https://www.bleepingcomputer.com/feed/", "lang": "en"},
+        "Krebs on Security": {"url": "https://krebsonsecurity.com/feed/", "lang": "en"},
+        "Dark Reading": {"url": "https://www.darkreading.com/rss.xml", "lang": "en"}
     },
     "Artificial Intelligence": {
-        "OpenAI News": "https://openai.com/news/rss.xml",
-        "TechCrunch AI": "https://techcrunch.com/category/artificial-intelligence/feed/",
-        "Actu IA": "https://www.actuia.com/feed/",
-        "Hugging Face": "https://huggingface.co/blog/feed.xml",
-        "Google Research": "https://research.google/blog/rss/"
+        "OpenAI News": {"url": "https://openai.com/news/rss.xml", "lang": "en"},
+        "TechCrunch AI": {"url": "https://techcrunch.com/category/artificial-intelligence/feed/", "lang": "en"},
+        "Actu IA": {"url": "https://www.actuia.com/feed/", "lang": "fr"},
+        "Hugging Face": {"url": "https://huggingface.co/blog/feed.xml", "lang": "en"},
+        "Google Research": {"url": "https://research.google/blog/rss/", "lang": "en"}
     },
     "General IT": {
-        "Le Monde Informatique": "https://www.lemondeinformatique.fr/flux-rss/thematique/toutes-les-actualites/rss.xml",
-        "ZDNet Actualités": "https://www.zdnet.fr/feeds/rss/actualites/",
-        "Wired": "https://www.wired.com/feed/rss",
-        "Ars Technica": "https://feeds.arstechnica.com/arstechnica/index"
+        "Le Monde Informatique": {"url": "https://www.lemondeinformatique.fr/flux-rss/thematique/toutes-les-actualites/rss.xml", "lang": "fr"},
+        "ZDNet Actualités": {"url": "https://www.zdnet.fr/feeds/rss/actualites/", "lang": "fr"},
+        "Wired": {"url": "https://www.wired.com/feed/rss", "lang": "en"},
+        "Ars Technica": {"url": "https://feeds.arstechnica.com/arstechnica/index", "lang": "en"}
     },
     "Regulatory Compliance": {
-        "ANSSI Actualités": "https://cyber.gouv.fr/actualites/rss/",
-        "LINC CNIL (RGPD)": "https://linc.cnil.fr/rss.xml",
-        "Global Security Mag (GRC)": "https://www.globalsecuritymag.fr/spip.php?page=backend"
+        "ANSSI Actualités": {"url": "https://cyber.gouv.fr/actualites/rss/", "lang": "fr"},
+        "LINC CNIL (RGPD)": {"url": "https://linc.cnil.fr/rss.xml", "lang": "fr"},
+        "Global Security Mag (GRC)": {"url": "https://www.globalsecuritymag.fr/spip.php?page=backend", "lang": "fr"}
     },
     "Offensive Security": {
-        "Hack The Box": "https://www.hackthebox.com/rss/blog/all",
-        "PortSwigger Blog": "https://portswigger.net/blog/rss"
+        "Hack The Box": {"url": "https://www.hackthebox.com/rss/blog/all", "lang": "en"},
+        "PortSwigger Blog": {"url": "https://portswigger.net/blog/rss", "lang": "en"}
     },
     "Threat Intel & SOC": {
-        "CERT-FR Menaces": "https://www.cert.ssi.gouv.fr/cti/feed/",
-        "SANS ISC": "https://isc.sans.edu/rssfeed.xml",
-        "ESET WeLiveSecurity": "https://www.welivesecurity.com/feed/",
-        "Microsoft Security": "https://www.microsoft.com/en-us/security/blog/feed/"
+        "CERT-FR Menaces": {"url": "https://www.cert.ssi.gouv.fr/cti/feed/", "lang": "fr"},
+        "SANS ISC": {"url": "https://isc.sans.edu/rssfeed.xml", "lang": "en"},
+        "ESET WeLiveSecurity": {"url": "https://www.welivesecurity.com/feed/", "lang": "en"},
+        "Microsoft Security": {"url": "https://www.microsoft.com/en-us/security/blog/feed/", "lang": "en"}
     }
 }
 
@@ -448,6 +448,32 @@ def clean_html_description(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+def translate_to_french(text):
+    """Translates a text from English to French using MyMemory free API."""
+    if not text:
+        return ""
+    if not any(c.isalpha() for c in text):
+        return text
+        
+    url = "https://api.mymemory.translated.net/get?" + urllib.parse.urlencode({
+        "q": text,
+        "langpair": "en|fr"
+    })
+    req = urllib.request.Request(
+        url,
+        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            res_data = response.read().decode('utf-8')
+            res_json = json.loads(res_data)
+            translated = res_json.get("responseData", {}).get("translatedText", text)
+            if "mymemory" in translated.lower() or "limit" in translated.lower() or "quota" in translated.lower():
+                return text
+            return translated
+    except Exception:
+        return text
+
 def send_digest_to_telegram(digest_categories):
     """Formats and sends a consolidated news digest categorized by domain to Telegram using HTML."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
@@ -498,7 +524,17 @@ def send_digest_to_telegram(digest_categories):
         
         # Display top 10 articles
         for i, art in enumerate(articles[:10], 1):
-            title = escape_html(art['title'])
+            title = art['title']
+            desc = clean_html_description(art.get("description", ""))
+            
+            # Auto-translate if language is English
+            if art.get("lang") == "en":
+                print(f"[*] Translating to French: {title[:40]}...")
+                title = translate_to_french(title)
+                if desc:
+                    desc = translate_to_french(desc)
+            
+            title = escape_html(title)
             source = escape_html(art.get('source', ''))
             
             # Format date beautifully
@@ -512,13 +548,11 @@ def send_digest_to_telegram(digest_categories):
             message += f"{i}. <b>{title}</b>\n"
             message += f"<i>{source}{date_info}</i>\n"
             
-            if art.get("description"):
-                desc = clean_html_description(art["description"])
-                if desc:
-                    # Limit description to 150 characters
-                    if len(desc) > 150:
-                        desc = desc[:147] + "..."
-                    message += f"💡 {escape_html(desc)}\n"
+            if desc:
+                # Limit description to 150 characters
+                if len(desc) > 150:
+                    desc = desc[:147] + "..."
+                message += f"💡 {escape_html(desc)}\n"
             
             message += f"🔗 <a href=\"{art['link']}\">Lire l'article</a>\n\n"
             
@@ -621,6 +655,7 @@ if __name__ == "__main__":
             articles = fetch_cyber_news(args.feed_url)
             for art in articles:
                 art['source'] = "Custom"
+                art['lang'] = "en"  # default to English for custom
             digest_categories["Custom Feed"] = articles
         else:
             # Categorized feeds
@@ -628,7 +663,9 @@ if __name__ == "__main__":
                 category_articles = []
                 seen_urls = set()
                 
-                for source_name, url in sources.items():
+                for source_name, source_info in sources.items():
+                    url = source_info["url"]
+                    lang = source_info["lang"]
                     articles = fetch_cyber_news(url)
                     for art in articles:
                         # Normalize URL to avoid duplicates
@@ -636,6 +673,7 @@ if __name__ == "__main__":
                         if norm_url not in seen_urls:
                             seen_urls.add(norm_url)
                             art['source'] = source_name
+                            art['lang'] = lang
                             category_articles.append(art)
                 
                 # Sort consolidated category articles by date
