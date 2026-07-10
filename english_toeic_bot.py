@@ -15,9 +15,9 @@ import argparse
 import urllib.request
 import urllib.parse
 
-# Telegram configuration
-TELEGRAM_BOT_TOKEN = "8679370287:AAEVxXZzJ1zqBTUhaxyAf0_-YdYgke7LdYU"
-TELEGRAM_CHAT_ID = "-1003338204025"
+# Telegram configuration (should be configured via environment variables)
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = ""
 
 # Database of exercises
 MORNING_EXERCISES = [

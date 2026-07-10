@@ -24,9 +24,9 @@ from collections import defaultdict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Configure Telegram credentials here
-TELEGRAM_BOT_TOKEN = "8690266631:AAEoxgo0YLnoxc5h9CwwcvW15wy_vkcILKI"
-TELEGRAM_CHAT_ID = "-1004448062967"
+# Configure Telegram credentials here (should be configured via environment variables)
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = ""
 
 DEFAULT_LOG_FILE = "mock_auth.log"
 THRESHOLD = 5
