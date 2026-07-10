@@ -149,6 +149,9 @@ def send_telegram_message(message):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
 
+    token = token.strip().strip('"').strip("'")
+    chat_id = chat_id.strip().strip('"').strip("'")
+
     if not token or not chat_id:
         print("[-] Error: Telegram bot token or chat ID is not configured.", file=sys.stderr)
         sys.exit(1)

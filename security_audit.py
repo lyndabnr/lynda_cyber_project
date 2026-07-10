@@ -187,6 +187,8 @@ def send_telegram_alert(suspicious_ips, log_file, threshold):
 
 def send_telegram_raw_message(token, chat_id, message, parse_mode="Markdown"):
     """Posts a text message to the Telegram bot API."""
+    token = token.strip().strip('"').strip("'")
+    chat_id = chat_id.strip().strip('"').strip("'")
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     
     # POST payload
@@ -208,8 +210,10 @@ def send_telegram_raw_message(token, chat_id, message, parse_mode="Markdown"):
                 print("[+] Telegram message successfully sent.")
             else:
                 print(f"[-] Telegram API error: {res_json.get('description')}", file=sys.stderr)
+                sys.exit(1)
     except Exception as e:
         print(f"[-] Failed to send Telegram message - Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def parse_feed_date(date_str):
     """Parses a date string from an RSS or Atom feed into a timezone-aware datetime object."""
