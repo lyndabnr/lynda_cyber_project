@@ -14,10 +14,20 @@ import random
 import argparse
 import urllib.request
 import urllib.parse
+import urllib.error
 
-# Telegram configuration (should be configured via environment variables)
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+# Try to import local secrets if they exist (for local runs, ignored by git)
+try:
+    import secrets_config
+    LOCAL_BOT_TOKEN = getattr(secrets_config, "TELEGRAM_BOT_TOKEN_TOEIC", "")
+    LOCAL_CHAT_ID = getattr(secrets_config, "TELEGRAM_CHAT_ID_TOEIC", "")
+except ImportError:
+    LOCAL_BOT_TOKEN = ""
+    LOCAL_CHAT_ID = ""
+
+# Telegram configuration (should be configured via environment variables or secrets_config.py)
+TELEGRAM_BOT_TOKEN = LOCAL_BOT_TOKEN or ""
+TELEGRAM_CHAT_ID = LOCAL_CHAT_ID or ""
 
 # Database of exercises
 MORNING_EXERCISES = [
@@ -146,8 +156,8 @@ Effective September 1, all employees must display their new color-coded photo id
 
 def send_telegram_message(message):
     """Sends a formatted HTML message to the configured Telegram chat."""
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN_TOEIC", os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN))
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID_TOEIC", os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID))
 
     token = token.strip().strip('"').strip("'")
     chat_id = chat_id.strip().strip('"').strip("'")
@@ -175,8 +185,16 @@ def send_telegram_message(message):
                 print("[+] Telegram TOEIC exercise sent successfully.")
             else:
                 print(f"[-] Telegram API error: {res_json.get('description')}", file=sys.stderr)
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode("utf-8")
+            print(f"[-] Telegram API HTTP Error {e.code}: {error_body}", file=sys.stderr)
+        except Exception:
+            print(f"[-] Telegram API HTTP Error {e.code}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(f"[-] Failed to send Telegram message - Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def format_options(options):
     """Formats options dictionary into a clean string using HTML tags."""
@@ -222,7 +240,25 @@ def send_evening():
     print(f"[*] Selecting evening exercise #{ex['id']}...")
     send_telegram_message(message)
 
+def load_dotenv(dotenv_path=".env"):
+    """Loads environment variables from a local .env file if it exists."""
+    if os.path.exists(dotenv_path):
+        try:
+            with open(dotenv_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        key, val = line.split("=", 1)
+                        key = key.strip()
+                        val = val.strip().strip('"').strip("'")
+                        os.environ[key] = val
+        except Exception as e:
+            print(f"[i] Warning: Could not read .env file: {e}", file=sys.stderr)
+
 if __name__ == "__main__":
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Send TOEIC exercises to Telegram.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--morning", action="store_true", help="Send a morning grammar/vocab exercise")

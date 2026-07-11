@@ -24,9 +24,18 @@ from collections import defaultdict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Configure Telegram credentials here (should be configured via environment variables)
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+# Try to import local secrets if they exist (for local runs, ignored by git)
+try:
+    import secrets_config
+    LOCAL_BOT_TOKEN = getattr(secrets_config, "TELEGRAM_BOT_TOKEN_WATCH", "")
+    LOCAL_CHAT_ID = getattr(secrets_config, "TELEGRAM_CHAT_ID_WATCH", "")
+except ImportError:
+    LOCAL_BOT_TOKEN = ""
+    LOCAL_CHAT_ID = ""
+
+# Configure Telegram credentials here (should be configured via environment variables or secrets_config.py)
+TELEGRAM_BOT_TOKEN = LOCAL_BOT_TOKEN or ""
+TELEGRAM_CHAT_ID = LOCAL_CHAT_ID or ""
 
 DEFAULT_LOG_FILE = "mock_auth.log"
 THRESHOLD = 5
@@ -165,8 +174,8 @@ Potential brute-force attacks detected:
 
 def send_telegram_alert(suspicious_ips, log_file, threshold):
     """Sends a summary of alerts to a Telegram channel/chat using urllib."""
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN_WATCH", os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN))
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID_WATCH", os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID))
 
     if not token or not chat_id:
         print("[-] Error: Telegram alert requested, but TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured.", file=sys.stderr)
@@ -211,6 +220,13 @@ def send_telegram_raw_message(token, chat_id, message, parse_mode="Markdown"):
             else:
                 print(f"[-] Telegram API error: {res_json.get('description')}", file=sys.stderr)
                 sys.exit(1)
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode("utf-8")
+            print(f"[-] Telegram API HTTP Error {e.code}: {error_body}", file=sys.stderr)
+        except Exception:
+            print(f"[-] Telegram API HTTP Error {e.code}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(f"[-] Failed to send Telegram message - Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -480,8 +496,8 @@ def translate_to_french(text):
 
 def send_digest_to_telegram(digest_categories):
     """Formats and sends a consolidated news digest categorized by domain to Telegram using HTML."""
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+    token = os.environ.get("TELEGRAM_BOT_TOKEN_WATCH", os.environ.get("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN))
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID_WATCH", os.environ.get("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID))
 
     if not token or not chat_id:
         print("[-] Error: Telegram digest alert requested, but TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured.", file=sys.stderr)
@@ -635,7 +651,25 @@ def audit_log(file_path, threshold, json_output=None, email_recipient=None, tele
         else:
             print("[INFO] No suspicious activities to report. Telegram alert skipped.")
 
+def load_dotenv(dotenv_path=".env"):
+    """Loads environment variables from a local .env file if it exists."""
+    if os.path.exists(dotenv_path):
+        try:
+            with open(dotenv_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        key, val = line.split("=", 1)
+                        key = key.strip()
+                        val = val.strip().strip('"').strip("'")
+                        os.environ[key] = val
+        except Exception as e:
+            print(f"[i] Warning: Could not read .env file: {e}", file=sys.stderr)
+
 if __name__ == "__main__":
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Scan a log file to detect potential brute force attacks & pull cyber news.")
     
     # Sub-arguments for audit vs news
